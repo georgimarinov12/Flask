@@ -4,7 +4,7 @@ from errors import ApplicationError
 
 class Ad(object):
 
-    def __init__(self, creator_id, title, desc, price, date, is_available=1, buyer, ad_id=None):
+    def __init__(self, creator_id, title, desc, price, date, buyer, is_available=1, ad_id=None):
         self.creator_id
         self.id = ad_id
         self.title = title
@@ -27,38 +27,52 @@ class Ad(object):
     def delete(ad_id):
         result = None
         with SQLite() as db:
-            result = db.execute("DELETE FROM post WHERE id = ?",
+            result = db.execute("DELETE FROM ad WHERE id = ?",
                     (ad_id,))
         if result.rowcount == 0:
             raise ApplicationError("No value present", 404)
 
     @staticmethod
-    def find(ad_id):
+    def find_by_id(ad_id):
         result = None
         with SQLite() as db:
             if self.is_available == 0:
                 result = db.execute(
-                        "SELECT title, desc, price, date, is_available, buyer, id FROM post WHERE id = ?",
+                        "SELECT creator_id, title, desc, price, date, is_available, buyer, id FROM ad WHERE id = ?",
                         (ad_id,))
             else:
                 result = db.execute(
-                        "SELECT title, desc, price, date, is_available, id FROM post WHERE id = ?",
+                        "SELECT creator_id, title, desc, price, date, is_available, id FROM ad WHERE id = ?",
                         (ad_id,))
         ad = result.fetchone()
         if ad is None:
             raise ApplicationError(
                     "Ad with id {} not found".format(ad_id), 404)
         return Ad(*ad)
-
+    
+    @staticmethod
+    def find_all_purchased(creator_id):
+        result = None
+        with SQLite() as db:
+            result = db.execute(
+                    "SELECT creator_id, title, desc, price, date, is_available, buyer, id FROM ad WHERE (creator_id = ? AND is_available = 0)",
+                    (creator_id,))
+        
+        ad = result.fetchall()
+        if ad is None:
+            raise ApplicationError(
+                    "User with id {} has no ads".format(creator_id), 404)
+        return Ad(*ad)
+    
     @staticmethod
     def all():
         with SQLite() as db:
             if self.is_available == 0:
                 result = db.execute(
-                        "SELECT title, desc, price, date, is_available, buyer, id FROM post").fetchall()
+                        "SELECT creator_id, title, desc, price, date, is_available, buyer, id FROM ad").fetchall()
             else:
                 result = db.execute(
-                        "SELECT title, desc, price, date, is_available, id FROM post").fetchall()
+                        "SELECT creator_id, title, desc, price, date, is_available, id FROM ad").fetchall()
             return [Ad(*row) for row in result]
 
     def __get_save_query(self):

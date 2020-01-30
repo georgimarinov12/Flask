@@ -10,21 +10,26 @@ from model.user import User
 from errors import register_error_handlers
 
 from security.basic_authentication import generate_password_hash
-from security.basic_authentication import init_basic_auth
+from security.basic_authentication import require_login, verify_password
 
 
 app = Flask(__name__)
-auth = init_basic_auth()
+#auth = init_basic_auth()
 register_error_handlers(app)
 
 
+@app.route("/")
+def homepage():
+    return render_template("index.html")
+
+
 @app.route("/api/ads", methods = ["POST"])
-@auth.login_required
-def create_ad():
+@require_login
+def create_ad(user):
     ad_data = request.get_json(force=True, silent=True)
     if ad_data == None:
         return "Bad request", 400
-    ad = Ad(ad_data["title"], ad_data["desc"], ad_data["price"], ad_data["date"], ad_data["buyer"])
+    ad = Ad(user.id, ad_data["title"], ad_data["desc"], ad_data["price"], ad_data["date"], ad_data["buyer"])
     ad.save()
     return json.dumps(ad.to_dict()), 201
 
@@ -39,24 +44,35 @@ def list_ads():
 
 @app.route("/api/ads/<ad_id>", methods = ["GET"])
 def get_ad(ad_id):
-    return json.dumps(Ad.find(ad_id).to_dict())
+    return json.dumps(Ad.find_by_id(ad_id).to_dict())
 
 
 @app.route("/api/ads/<ad_id>", methods = ["DELETE"])
-@auth.login_required
-def delete_ad(ad_id):
+@require_login
+def delete_ad(ad_id, user):
+    ad_data = request.get_json(force=True, silent=True)
+    if ad_data == None:
+        return "Bad request", 400
+
+    ad = Ad.find_by_id(ad_id)
+    if ad.creator_id is not user.id:
+        return "Unauthorized", 401
+    
     Ad.delete(ad_id)
     return ""
 
 
 @app.route("/api/ads/<ad_id>", methods = ["PATCH"])
-@auth.login_required
-def change_ad(ad_id):
+@require_login
+def change_ad(ad_id, user):
     ad_data = request.get_json(force=True, silent=True)
     if ad_data == None:
         return "Bad request", 400
 
-    ad = Ad.find(ad_id)
+    ad = Ad.find_by_id(ad_id)
+    if ad.creator_id is not user.id:
+        return "Unauthorized", 401
+    
     if "title" in ad_data:
         ad.title = ad_data["title"]
     if "desc" in ad_data:
@@ -66,8 +82,21 @@ def change_ad(ad_id):
     return json.dumps(ad.save().to_dict())
 
 
-@app.route("/api/users", methods = ["POST"])
-def create_user():
+@app.route("/api/ads/<ad_id>/buy", methods = ["PATCH"])
+@require_login
+def buy_article(ad_id, user):
+    ad = Ad.find_by_id(ad_id)
+    if ad.is_available == 0:
+        return "Bad request", 400
+    
+    ad.is_available = 0
+    ad.buyer = user.id
+    
+    return json.dumps(ad.save().to_dict())
+
+
+@app.route("/api/register", methods = ["POST"])
+def register():
     user_data = request.get_json(force=True, silent=True)
     if user_data == None:
         return "Bad request", 400
@@ -77,9 +106,22 @@ def create_user():
     return json.dumps(user.to_dict()), 201
 
 
-@app.route("/api/posts/<user_id>", methods = ["GET"])
+@app.route("/api/login", methods = ["POST"])
+def login():
+    user_data = json.loads(request.data.decode('ascii'))
+    email = user_data["email"]
+    password = user_data["password"]
+    user = User.find_by_email(email)
+    
+    if not user or not verify_password(email, password):
+        return jsonify({'token': None})
+    token = user.generate_token()
+    return jsonify({'token': token.decode('ascii')})
+
+
+@app.route("/api/users/<user_id>", methods = ["GET"])
 def get_user(user_id):
-    return json.dumps(User.find(user_id).to_dict()
+    return json.dumps(User.find(user_id).to_dict())
 
 
 @app.route("/api/users", methods = ["GET"])
@@ -103,7 +145,7 @@ def change_user_info(user_id):
         user.address = user_data["address"]
     if "phone_number" in user_data:
         user.phone_number = user_data["phone_number"]
-    return json.dumps(post.save().to_dict())
+    return json.dumps(user.save().to_dict())
 
 
 @app.route("/api/users/<user_id>", methods = ["DELETE"])
@@ -112,14 +154,17 @@ def delete_user(user_id):
     return ""
 
 
-@app.route("/", methods = ["GET"])
-@auth.login_required
-def ads():
-    return render_template("index.html")
+@app.route("/api/users/<user_id>/purchased", methods = ["GET"])
+@require_login
+def list_purchased(user_id):
+    return Ad.find_all_purchased(user_id)
+    
 
 
 @app.route("/ads/<ad_id>", methods = ["GET"])
 def view_ad(ad_id):
-    return render_template("ad.html", ad=Ad.find(ad_id))
+    return render_template("ad.html", ad=Ad.find_by_id(ad_id))
 
 
+if __name__ == '__main__':
+    app.run()

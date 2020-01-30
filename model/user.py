@@ -1,6 +1,13 @@
 from database import SQLite
 from errors import ApplicationError
 
+from itsdangerous import(
+    TimedJSONWebSignatureSerializer as Serializer,
+    BadSignature,
+    SignatureExpired
+)
+
+SECRET_KEY = 'r7R9RhGgDPvvWl3iNzLuIIfELmo'
 
 class User(object):
 
@@ -46,18 +53,33 @@ class User(object):
         return User(*user)
 
     @staticmethod
-    def find_by_username(username):
+    def find_by_email(email):
         result = None
         with SQLite() as db:
             result = db.execute(
-                    "SELECT username, password,  email, address, phone_number, id FROM user WHERE username = ?",
-                    (username,))
+                    "SELECT username, password,  email, address, phone_number, id FROM user WHERE email = ?",
+                    (email,))
         user = result.fetchone()
         if user is None:
             raise ApplicationError(
                     "Post with name {} not found".format(username), 404)
         return User(*user)
-
+    
+    def generate_token(self):
+        s = Serializer(SECRET_KEY, expires_in = 600)
+        return s.dumps({'user': self})
+    
+    @staticmethod
+    def verify_token(token):
+        s = Serializer(SECRET_KEY)
+        try:
+            s.loads(token)
+        except SignatureExpired:
+            return False
+        except BadSignature:
+            return False
+        return True 
+    
     @staticmethod
     def all():
         with SQLite() as db:
