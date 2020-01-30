@@ -6,14 +6,14 @@ DB_NAME = "example.db"
 conn = sqlite.connect(DB_NAME)
 
 conn.cursor().execute('''
-CREATE TABLE IF NOT EXISTS post
+CREATE TABLE IF NOT EXISTS ad
     (
         creator_id INTEGER,
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT,
-        desc TEXT,
+        title TEXT NOT NULL,
+        desc TEXT NOT NULL,
         price REAL,
-        date TEXT,
+        date TEXT NOT NULL,
         is_available INTEGER,
         buyer INTEGER
     )

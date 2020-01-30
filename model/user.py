@@ -49,7 +49,7 @@ class User(object):
         user = result.fetchone()
         if user is None:
             raise ApplicationError(
-                    "Post with id {} not found".format(user_id), 404)
+                    "User with id {} not found".format(user_id), 404)
         return User(*user)
 
     @staticmethod
@@ -62,23 +62,21 @@ class User(object):
         user = result.fetchone()
         if user is None:
             raise ApplicationError(
-                    "Post with name {} not found".format(username), 404)
+                    "User with name {} not found".format(username), 404)
         return User(*user)
     
     def generate_token(self):
-        s = Serializer(SECRET_KEY, expires_in = 600)
-        return s.dumps({'user': self})
+        s = Serializer(SECRET_KEY)
+        return s.dumps({'id': self.id})
     
     @staticmethod
     def verify_token(token):
         s = Serializer(SECRET_KEY)
         try:
             s.loads(token)
-        except SignatureExpired:
-            return False
         except BadSignature:
             return False
-        return True 
+        return s.loads(token)['id']
     
     @staticmethod
     def all():

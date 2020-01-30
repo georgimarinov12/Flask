@@ -1,6 +1,7 @@
 from flask_httpauth import HTTPBasicAuth
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
+from flask import request
 
 from errors import ApplicationError
 from errors import register_error_handlers
@@ -30,8 +31,8 @@ def verify_password(email, password):
 def require_login(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
-        token = request.cookies.get('token')
+        token = request.headers.get('token')
         if not token or not User.verify_token(token):
-            return "Unauthorized", 401
-        return func(*args, **kwargs)
+            return "Forbidden", 403
+        return func(User.verify_token(token), *args, **kwargs)
     return wrapper

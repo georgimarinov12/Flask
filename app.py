@@ -3,7 +3,7 @@ import uuid
 
 from flask import Flask
 from flask import request
-from flask import render_template
+from flask import render_template, jsonify
 
 from model.ad import Ad
 from model.user import User
@@ -23,18 +23,18 @@ def homepage():
     return render_template("index.html")
 
 
-@app.route("/api/ads", methods = ["POST"])
+@app.route("/ads", methods = ["POST"])
 @require_login
-def create_ad(user):
+def create_ad(user_id):
     ad_data = request.get_json(force=True, silent=True)
     if ad_data == None:
         return "Bad request", 400
-    ad = Ad(user.id, ad_data["title"], ad_data["desc"], ad_data["price"], ad_data["date"], ad_data["buyer"])
+    ad = Ad(user_id, ad_data["title"], ad_data["desc"], ad_data["price"], ad_data["date"], None)
     ad.save()
     return json.dumps(ad.to_dict()), 201
 
 
-@app.route("/api/ads", methods = ["GET"])
+@app.route("/ads", methods = ["GET"])
 def list_ads():
     result = {"result": []}
     for ad in Ad.all():
@@ -47,31 +47,31 @@ def get_ad(ad_id):
     return json.dumps(Ad.find_by_id(ad_id).to_dict())
 
 
-@app.route("/api/ads/<ad_id>", methods = ["DELETE"])
+@app.route("/ads/<ad_id>", methods = ["DELETE"])
 @require_login
-def delete_ad(ad_id, user):
+def delete_ad(ad_id, user_id):
     ad_data = request.get_json(force=True, silent=True)
     if ad_data == None:
         return "Bad request", 400
 
     ad = Ad.find_by_id(ad_id)
-    if ad.creator_id is not user.id:
-        return "Unauthorized", 401
+    if ad.creator_id is not user_id:
+        return "Forbidden", 403
     
     Ad.delete(ad_id)
     return ""
 
 
-@app.route("/api/ads/<ad_id>", methods = ["PATCH"])
+@app.route("/ads/<ad_id>", methods = ["PATCH"])
 @require_login
-def change_ad(ad_id, user):
+def change_ad(ad_id, user_id):
     ad_data = request.get_json(force=True, silent=True)
     if ad_data == None:
         return "Bad request", 400
 
     ad = Ad.find_by_id(ad_id)
-    if ad.creator_id is not user.id:
-        return "Unauthorized", 401
+    if ad.creator_id is not user_id:
+        return "Forbidden", 403
     
     if "title" in ad_data:
         ad.title = ad_data["title"]
@@ -82,20 +82,20 @@ def change_ad(ad_id, user):
     return json.dumps(ad.save().to_dict())
 
 
-@app.route("/api/ads/<ad_id>/buy", methods = ["PATCH"])
+@app.route("/ads/<ad_id>/buy", methods = ["PATCH"])
 @require_login
-def buy_article(ad_id, user):
+def buy_article(ad_id, user_id):
     ad = Ad.find_by_id(ad_id)
     if ad.is_available == 0:
         return "Bad request", 400
     
     ad.is_available = 0
-    ad.buyer = user.id
+    ad.buyer = user_id
     
     return json.dumps(ad.save().to_dict())
 
 
-@app.route("/api/register", methods = ["POST"])
+@app.route("/register", methods = ["POST"])
 def register():
     user_data = request.get_json(force=True, silent=True)
     if user_data == None:
@@ -106,7 +106,7 @@ def register():
     return json.dumps(user.to_dict()), 201
 
 
-@app.route("/api/login", methods = ["POST"])
+@app.route("/login", methods = ["POST"])
 def login():
     user_data = json.loads(request.data.decode('ascii'))
     email = user_data["email"]
@@ -114,17 +114,17 @@ def login():
     user = User.find_by_email(email)
     
     if not user or not verify_password(email, password):
-        return jsonify({'token': None})
+        return "Forbidden", 403
     token = user.generate_token()
     return jsonify({'token': token.decode('ascii')})
 
 
-@app.route("/api/users/<user_id>", methods = ["GET"])
+@app.route("/users/<user_id>", methods = ["GET"])
 def get_user(user_id):
     return json.dumps(User.find(user_id).to_dict())
 
 
-@app.route("/api/users", methods = ["GET"])
+@app.route("/users", methods = ["GET"])
 def list_users():
     result = {"result": []}
     for user in User.all():
@@ -132,7 +132,7 @@ def list_users():
     return json.dumps(result)
 
 
-@app.route("/api/users/<user_id>", methods = ["PATCH"])
+@app.route("/users/<user_id>", methods = ["PATCH"])
 def change_user_info(user_id):
     user_data = request.get_json(force=True, silent=True)
     if user_data == None:
@@ -148,13 +148,13 @@ def change_user_info(user_id):
     return json.dumps(user.save().to_dict())
 
 
-@app.route("/api/users/<user_id>", methods = ["DELETE"])
+@app.route("/users/<user_id>", methods = ["DELETE"])
 def delete_user(user_id):
     User.delete(user_id)
     return ""
 
 
-@app.route("/api/users/<user_id>/purchased", methods = ["GET"])
+@app.route("/users/<user_id>/purchased", methods = ["GET"])
 @require_login
 def list_purchased(user_id):
     return Ad.find_all_purchased(user_id)
