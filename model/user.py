@@ -25,8 +25,17 @@ class User(object):
         return user_data
 
     def save(self):
+        query = "{} INTO user {} VALUES {}"
+        
+        if self.user_id == None:
+            query = query.format("INSERT", "(username, password, email, address, phone_number)", "(?, ?, ?, ?, ?)")
+            args = (self.username, self.password, self.email, self.address, self.phone_number)
+        else:
+            query = query.format("REPLACE", "(user_id, username, password, email, address, phone_number)", "(?, ?, ?, ?, ?, ?)")
+            args = (self.user_id, self.username, self.password, self.email, self.address, self.phone_number)
+        
         with SQLite() as db:
-            cursor = db.execute(self.__get_save_query())
+            cursor = db.execute(query, args)
             self.user_id = cursor.lastrowid
         return self
 
@@ -40,7 +49,7 @@ class User(object):
             raise ApplicationError("No value present", 404)
 
     @staticmethod
-    def find(user_id):
+    def find_by_id(user_id):
         result = None
         with SQLite() as db:
             result = db.execute(
@@ -84,14 +93,4 @@ class User(object):
             result = db.execute(
                     "SELECT username, password, email, address, phone_number, user_id FROM user").fetchall()
             return [User(*row) for row in result]
-
-    def __get_save_query(self):
-        query = "{} INTO user {} VALUES {}"
-        if self.user_id == None:
-            args = (self.username, self.password, self.email, self.address, self.phone_number)
-            query = query.format("INSERT", "(username, password, email, address, phone_number)", args)
-        else:
-            args = (self.user_id, self.username, self.password, self.email, self.address, self.phone_number)
-            query = query.format("REPLACE", "(user_id, username, password, email, address, phone_number)", args)
-        return query
 

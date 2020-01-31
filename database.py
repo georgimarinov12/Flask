@@ -1,7 +1,7 @@
 import sqlite3 as sqlite
 
 
-DB_NAME = "example.db"
+DB_NAME = "onlineStore.db"
 
 conn = sqlite.connect(DB_NAME)
 

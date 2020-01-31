@@ -2,19 +2,16 @@ import json
 import uuid
 
 from flask import Flask
-from flask import request
-from flask import render_template, jsonify
+from flask import request, render_template, jsonify
 
 from model.ad import Ad
 from model.user import User
 from errors import register_error_handlers
 
-from security.basic_authentication import generate_password_hash
-from security.basic_authentication import require_login, verify_password
+from security.basic_authentication import generate_password_hash, require_login, verify_password 
 
 
 app = Flask(__name__)
-#auth = init_basic_auth()
 register_error_handlers(app)
 
 
@@ -42,9 +39,14 @@ def list_ads():
     return json.dumps(result)
 
 
-@app.route("/api/ads/<ad_id>", methods = ["GET"])
-def get_ad(ad_id):
-    return json.dumps(Ad.find_by_id(ad_id).to_dict())
+#@app.route("/ads/<ad_id>", methods = ["GET"])
+#def get_ad(ad_id):
+#    return json.dumps(Ad.find_by_id(ad_id).to_dict())
+
+
+@app.route("/ads/<ad_id>", methods = ["GET"])
+def view_ad(ad_id):
+    return render_template("ad.html", ad=Ad.find_by_id(ad_id))
 
 
 @app.route("/ads/<ad_id>", methods = ["DELETE"])
@@ -71,8 +73,6 @@ def change_ad(user_id, ad_id):
 
     ad = Ad.find_by_id(ad_id)
     if ad.creator_id is not user_id:
-        print(ad.creator_id)
-        print(user_id)
         return "Forbidden", 403
     
     if "title" in ad_data:
@@ -123,7 +123,7 @@ def login():
 
 @app.route("/users/<user_id>", methods = ["GET"])
 def get_user(user_id):
-    return json.dumps(User.find(user_id).to_dict())
+    return json.dumps(User.find_by_id(user_id).to_dict())
 
 
 @app.route("/users", methods = ["GET"])
@@ -140,7 +140,7 @@ def change_user_info(user_id):
     if user_data == None:
         return "Bad request", 400
 
-    user = User.find(user_id)
+    user = User.find_by_id(user_id)
     if "username" in user_data:
         user.username = user_data["username"]
     if "address" in user_data:
@@ -162,11 +162,6 @@ def list_purchased(user_id):
     return json.dumps(Ad.find_all_purchased(user_id))
     
 
-
-@app.route("/ads/<ad_id>", methods = ["GET"])
-def view_ad(ad_id):
-    return render_template("ad.html", ad=Ad.find_by_id(ad_id))
-
-
 if __name__ == '__main__':
     app.run()
+

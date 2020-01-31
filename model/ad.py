@@ -19,15 +19,17 @@ class Ad(object):
         return self.__dict__
 
     def save(self):
+        query = "{} INTO ad {} VALUES {}"
+    
         if self.ad_id == None:
-            args = (self.creator_id, self.title, self.desc, self.price, self.date, self.buyer, self.is_available)
-            #query = query.format("INSERT", "(creator_id, title, desc, price, date, buyer, is_available)", "(?, ?, ?, ?, ?, ?, ?)")
+            query = query.format("INSERT", "(creator_id, title, desc, price, date, buyer, is_available)", "(?, ?, ?, ?, ?, ?, ?)")
+            args = (self.creator_id, self.title, self.desc, self.price, self.date, self.buyer, self.is_available) 
         else:
+            query = query.format("REPLACE", "(creator_id, ad_id, title, desc, price, date, buyer, is_available)", "(?, ?, ?, ?, ?, ?, ?, ?)")
             args = (self.creator_id, self.ad_id, self.title, self.desc, self.price, self.date, self.buyer, self.is_available)
-            #query = query.format("REPLACE", "(ad_id, title, desc, price)", "(?, ?, ?, ?)")
         
         with SQLite() as db:
-            cursor = db.execute(self.__get_save_query(), args)
+            cursor = db.execute(query, args)
             self.ad_id = cursor.lastrowid
         return self
 
@@ -74,19 +76,4 @@ class Ad(object):
             result = db.execute(
                     "SELECT creator_id, title, desc, price, date, buyer, is_available, ad_id FROM ad").fetchall()
             return [Ad(*row) for row in result]
-
-    def __get_save_query(self):
-        query = "{} INTO ad {} VALUES {}"
-        if self.ad_id == None:
-            #args = (self.creator_id, self.title, self.desc, self.price, self.date, self.buyer, self.is_available)
-            query = query.format("INSERT", "(creator_id, title, desc, price, date, buyer, is_available)", "(?, ?, ?, ?, ?, ?, ?)")
-        else:
-            #args = (self.ad_id, self.title, self.desc, self.price)
-            query = query.format("REPLACE", "(creator_id, ad_id, title, desc, price, date, buyer, is_available)", "(?, ?, ?, ?, ?, ?, ?, ?)")
-        return query
-
-
-
-
-
 
