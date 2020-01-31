@@ -14,7 +14,6 @@ from security.basic_authentication import require_login, verify_password
 
 
 app = Flask(__name__)
-#auth = init_basic_auth()
 register_error_handlers(app)
 
 
