@@ -9,7 +9,7 @@ conn.cursor().execute('''
 CREATE TABLE IF NOT EXISTS ad
     (
         creator_id INTEGER,
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        ad_id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT NOT NULL,
         desc TEXT NOT NULL,
         price REAL,
@@ -23,7 +23,7 @@ conn.commit()
 conn.cursor().execute('''
 CREATE TABLE IF NOT EXISTS user
     (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT NOT NULL UNIQUE,
         password TEXT NOT NULL,
         email TEXT NOT NULL UNIQUE,

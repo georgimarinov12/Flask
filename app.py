@@ -29,7 +29,7 @@ def create_ad(user_id):
     ad_data = request.get_json(force=True, silent=True)
     if ad_data == None:
         return "Bad request", 400
-    ad = Ad(user_id, ad_data["title"], ad_data["desc"], ad_data["price"], ad_data["date"], None)
+    ad = Ad(user_id, ad_data["title"], ad_data["desc"], ad_data["price"], ad_data["date"], None, 1, None)
     ad.save()
     return json.dumps(ad.to_dict()), 201
 
@@ -49,7 +49,7 @@ def get_ad(ad_id):
 
 @app.route("/ads/<ad_id>", methods = ["DELETE"])
 @require_login
-def delete_ad(ad_id, user_id):
+def delete_ad(user_id, ad_id):
     ad_data = request.get_json(force=True, silent=True)
     if ad_data == None:
         return "Bad request", 400
@@ -64,27 +64,29 @@ def delete_ad(ad_id, user_id):
 
 @app.route("/ads/<ad_id>", methods = ["PATCH"])
 @require_login
-def change_ad(ad_id, user_id):
+def change_ad(user_id, ad_id):
     ad_data = request.get_json(force=True, silent=True)
     if ad_data == None:
         return "Bad request", 400
 
     ad = Ad.find_by_id(ad_id)
     if ad.creator_id is not user_id:
+        print(ad.creator_id)
+        print(user_id)
         return "Forbidden", 403
     
     if "title" in ad_data:
         ad.title = ad_data["title"]
     if "desc" in ad_data:
-        ad.content = ad_data["content"]
+        ad.desc = ad_data["desc"]
     if "price" in ad_data:
-        ad.content = ad_data["price"]
+        ad.price = ad_data["price"]
     return json.dumps(ad.save().to_dict())
 
 
 @app.route("/ads/<ad_id>/buy", methods = ["PATCH"])
 @require_login
-def buy_article(ad_id, user_id):
+def buy_article(user_id, ad_id):
     ad = Ad.find_by_id(ad_id)
     if ad.is_available == 0:
         return "Bad request", 400
@@ -154,10 +156,10 @@ def delete_user(user_id):
     return ""
 
 
-@app.route("/users/<user_id>/purchased", methods = ["GET"])
+@app.route("/users/purchased", methods = ["GET"])
 @require_login
 def list_purchased(user_id):
-    return Ad.find_all_purchased(user_id)
+    return json.dumps(Ad.find_all_purchased(user_id))
     
 
 
