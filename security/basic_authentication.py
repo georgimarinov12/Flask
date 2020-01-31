@@ -22,11 +22,6 @@ def verify_password(email, password):
 
     return user is not None and check_password_hash(user.password, password)
 
-
-#def init_basic_auth():
-#    auth = HTTPBasicAuth()
-#    auth.verify_password(__verify_password)
-#    return auth
     
 def require_login(func):
     @wraps(func)
